@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // مستند لكل مدير يتم إنشاؤه يدوياً من الكونسول (document id = uid المدير)
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // معرض الأعمال: قراءة للجميع، الكتابة للمدير فقط
+    match /gallery/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // طلبات العمل
+    match /requests/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'قيد المراجعة';
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+
+    // العملاء + الحركات المالية (مديونية / سداد)
+    match /customers/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if isAdmin();
+
+      match /transactions/{tid} {
+        allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+        allow create: if isAdmin();
+      }
+    }
+
+    // الشات بين العميل والمركز
+    match /chats/{uid}/messages/{mid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && (
+        (request.auth.uid == uid && request.resource.data.from == 'customer') ||
+        (isAdmin() && request.resource.data.from == 'admin')
+      );
+    }
+  }
+}

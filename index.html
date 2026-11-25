@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>مركز الفتح لصيانة المحركات</title>
+    <meta name="theme-color" content="#0a3750">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: {
+                colors: { brand: { 50:'#f0f7ff',100:'#e0effe',500:'#0284c7',600:'#0369a1',700:'#075985',800:'#0c4a6e',900:'#0a3750' } },
+                fontFamily: { cairo: ['Cairo','sans-serif'] }
+            } }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        .wire-canvas { background-color: #0f172a; border-radius: .75rem; max-width: 100%; }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+<header class="sticky top-0 z-40 bg-brand-900 text-white shadow-md">
+    <div class="max-w-md mx-auto sm:max-w-4xl px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-900 text-xl"><i class="fa-solid fa-bolt"></i></div>
+            <div>
+                <h1 class="font-bold text-base leading-tight">مركز الفتح</h1>
+                <p class="text-xs text-brand-100">لف وصيانة المحركات الكهربائية</p>
+            </div>
+        </div>
+        <button id="authBtn" class="flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-xs px-3 py-1.5 rounded-lg border border-brand-600">
+            <i class="fa-regular fa-user"></i><span id="userStatusText">تسجيل الدخول</span>
+        </button>
+    </div>
+</header>
+
+<main class="max-w-md mx-auto sm:max-w-4xl w-full flex-grow bg-slate-50 shadow-lg relative pb-24">
+
+    <div id="configBanner" class="hidden bg-red-100 text-red-800 text-xs font-bold p-3">
+        لم يتم ضبط Firebase بعد. عدّل ملف firebase-config.js وضع بيانات مشروعك.
+    </div>
+
+    <div class="bg-gradient-to-r from-amber-600 to-amber-500 text-slate-900 px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-sm">
+        <span class="flex items-center gap-1.5"><i class="fa-solid fa-industry"></i> الفيوم - المنطقة الصناعية الثانية (كوم أوشيم)</span>
+        <span class="bg-slate-900 text-amber-400 px-2 py-0.5 rounded text-[10px]">خدمة 24/7</span>
+    </div>
+
+    <!-- التعليم -->
+    <section id="tab-education" class="tab-content p-4 space-y-5">
+        <div class="border-b border-slate-200 pb-3">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-book-open text-brand-600"></i> دليل ومخططات لف المحركات</h2>
+            <p class="text-xs text-slate-500">رسومات توضيحية ومواصفات لف المحركات للتعليم والفنيين</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+            <label class="block text-xs font-bold text-slate-700">اختر نوع المحرك / عدد المجاري:</label>
+            <div class="grid grid-cols-2 gap-2" id="diagramButtons">
+                <button data-key="24_3phase" class="diagram-btn p-2.5 rounded-xl text-xs font-bold border-2">24 مجرى (3 فاز) - 1400 دورة</button>
+                <button data-key="24_1phase" class="diagram-btn p-2.5 rounded-xl text-xs font-bold border-2">24 مجرى (1 فاز) - تقويم وتشغيل</button>
+                <button data-key="36_3phase" class="diagram-btn p-2.5 rounded-xl text-xs font-bold border-2">36 مجرى (3 فاز) - 900 دورة</button>
+                <button data-key="spec_table" class="diagram-btn p-2.5 rounded-xl text-xs font-bold border-2">جدول أقطار السلك والقدرات</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 rounded-2xl p-4 shadow-md text-white space-y-3">
+            <div class="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+                <span id="diagramTitle" class="font-bold text-amber-400"></span>
+                <span class="text-slate-400 text-[10px]">مخطط تفاعلي</span>
+            </div>
+            <div id="canvasWrap" class="w-full flex justify-center overflow-x-auto py-2">
+                <canvas id="windingCanvas" width="340" height="220" class="wire-canvas border border-slate-700"></canvas>
+            </div>
+            <div id="specTable" class="hidden overflow-x-auto">
+                <table class="w-full text-xs text-center">
+                    <thead><tr class="text-amber-400 border-b border-slate-700">
+                        <th class="py-2">القدرة</th><th>قطر السلك (مم)</th><th>التوصيل</th>
+                    </tr></thead>
+                    <tbody class="text-slate-200">
+                        <tr class="border-b border-slate-800"><td class="py-2">5.5 حصان (4KW)</td><td>0.85</td><td>ستار</td></tr>
+                        <tr class="border-b border-slate-800"><td class="py-2">10 حصان (7.5KW)</td><td>1.05</td><td>دلتا</td></tr>
+                        <tr><td class="py-2">20 حصان (15KW)</td><td>2 × 0.90</td><td>دلتا</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="phaseLegend" class="flex flex-wrap items-center justify-center gap-4 text-xs pt-1 text-slate-300">
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> فاز U (أحمر)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> فاز V (أزرق)</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> فاز W (أصفر)</span>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-list-check text-brand-600"></i> تفاصيل وبيانات المحرك المختارة</h3>
+            <div id="diagramDescription" class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100"></div>
+        </div>
+    </section>
+
+    <!-- الأعمال -->
+    <section id="tab-gallery" class="tab-content p-4 space-y-5 hidden">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-camera text-brand-600"></i> معرض صور العمل والتجديد</h2>
+                <p class="text-xs text-slate-500">صور وثقها الفنيون للمحركات قبل وبعد الصيانة</p>
+            </div>
+            <button id="uploadBtn" class="hidden bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-2 rounded-xl font-bold items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-plus"></i> رفع صورة
+            </button>
+        </div>
+        <div id="galleryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+    </section>
+
+    <!-- طلب عمل -->
+    <section id="tab-requests" class="tab-content p-4 space-y-5 hidden">
+        <div class="border-b border-slate-200 pb-3">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-clipboard-list text-brand-600"></i> طلب صيانة واستفسار أسعار</h2>
+            <p class="text-xs text-slate-500">أرسل مواصفات المحرك للحصول على خطة الأسعار أو طلب زيارة موقع</p>
+        </div>
+
+        <form id="orderForm" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">اسم العميل / الشركة *</label>
+                <input type="text" id="clientName" required placeholder="مثال: شركة الفيوم للصناعات" class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف *</label>
+                    <input type="tel" id="clientPhone" required placeholder="010XXXXXXXX" class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">نوع الخدمة *</label>
+                    <select id="serviceType" class="w-full text-xs p-3 rounded-xl border border-slate-300 bg-white">
+                        <option value="لف محرك محروق">لف محرك محروق</option>
+                        <option value="طلب كشف أسعار">طلب كشف أسعار</option>
+                        <option value="صيانة ميكانيكية">تغيير رولمان بلي وخراطة</option>
+                        <option value="معاينة بالموقع">طلب زيارة فني لموقع المصنع</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">قدرة المحرك (حصان/كيلوواط)</label>
+                    <input type="text" id="motorPower" placeholder="مثال: 15 حصان / 11 KW" class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">السرعة (RPM)</label>
+                    <select id="motorRPM" class="w-full text-xs p-3 rounded-xl border border-slate-300 bg-white">
+                        <option value="3000">3000 دورة (2 قطب)</option>
+                        <option value="1400" selected>1400 دورة (4 أقطاب)</option>
+                        <option value="900">900 دورة (6 أقطاب)</option>
+                        <option value="700">700 دورة (8 أقطاب)</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">تفاصيل إضافية / العطل</label>
+                <textarea id="orderDetails" rows="3" placeholder="اكتب أي ملاحظات كـ: المحرك محروق بسبب سقوط فاز..." class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs py-3 rounded-xl shadow-md flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> إرسال طلب العمل الآن
+            </button>
+        </form>
+
+        <div class="bg-slate-100 p-4 rounded-2xl space-y-3">
+            <h3 id="requestsTitle" class="text-xs font-bold text-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-clock-rotate-left text-brand-600"></i> سجل طلباتك الأخيرة</h3>
+            <div id="requestsLog" class="space-y-2 text-xs"></div>
+        </div>
+    </section>
+
+    <!-- حسابي -->
+    <section id="tab-account" class="tab-content p-4 space-y-4 hidden">
+        <div class="border-b border-slate-200 pb-3">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-wallet text-brand-600"></i> <span id="accTitle">حسابي</span></h2>
+            <p class="text-xs text-slate-500">المديونية والسداد والمحادثة مع المركز</p>
+        </div>
+
+        <div id="accLoggedOut" class="bg-white p-5 rounded-2xl border border-slate-200 text-center space-y-3">
+            <p class="text-xs text-slate-600">سجّل دخولك لعرض حسابك ومحادثة المركز.</p>
+            <button id="accLoginBtn" class="bg-brand-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl">تسجيل الدخول</button>
+        </div>
+
+        <div id="accAdminBox" class="hidden bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+            <label class="block text-xs font-bold text-slate-700">اختر العميل:</label>
+            <select id="customerSelect" class="w-full text-xs p-3 rounded-xl border border-slate-300 bg-white"></select>
+            <form id="txForm" class="grid grid-cols-2 gap-2">
+                <select id="txType" class="text-xs p-3 rounded-xl border border-slate-300 bg-white">
+                    <option value="debt">إضافة مديونية</option>
+                    <option value="payment">تسجيل سداد</option>
+                </select>
+                <input id="txAmount" type="number" min="1" step="any" required placeholder="المبلغ" class="text-xs p-3 rounded-xl border border-slate-300">
+                <input id="txNote" type="text" placeholder="ملاحظة (اختياري)" class="col-span-2 text-xs p-3 rounded-xl border border-slate-300">
+                <button class="col-span-2 bg-brand-600 text-white text-xs font-bold py-2.5 rounded-xl">حفظ الحركة</button>
+            </form>
+        </div>
+
+        <div id="accView" class="hidden space-y-4">
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-white rounded-2xl border border-slate-200 p-3"><p class="text-[10px] text-slate-500">إجمالي المديونية</p><p id="sumDebt" class="font-bold text-sm text-red-600">0</p></div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-3"><p class="text-[10px] text-slate-500">المسدد</p><p id="sumPaid" class="font-bold text-sm text-emerald-600">0</p></div>
+                <div class="bg-brand-900 rounded-2xl p-3"><p class="text-[10px] text-brand-100">المتبقي</p><p id="sumLeft" class="font-bold text-sm text-amber-400">0</p></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3 space-y-2">
+                <h3 class="text-xs font-bold text-slate-700">كشف الحساب</h3>
+                <div id="txList" class="space-y-2 text-xs"></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3 space-y-2">
+                <h3 class="text-xs font-bold text-slate-700 flex items-center gap-1.5"><i class="fa-regular fa-comments text-brand-600"></i> المحادثة</h3>
+                <div id="chatBox" class="h-60 overflow-y-auto bg-slate-50 rounded-xl p-2 space-y-2 text-xs"></div>
+                <form id="chatForm" class="flex gap-2">
+                    <input id="chatInput" required autocomplete="off" placeholder="اكتب رسالتك..." class="flex-1 text-xs p-3 rounded-xl border border-slate-300">
+                    <button class="bg-brand-600 text-white px-4 rounded-xl"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- الموقع -->
+    <section id="tab-contact" class="tab-content p-4 space-y-5 hidden">
+        <div class="border-b border-slate-200 pb-3">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-brand-600"></i> موقع المركز وبيانات التواصل</h2>
+            <p class="text-xs text-slate-500">زورونا في الورشة أو تواصلوا معنا مباشرة</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-location-dot text-lg"></i></div>
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm">العنوان التفصيلي:</h3>
+                    <p class="text-xs text-slate-600 leading-relaxed mt-1">محافظة الفيوم - كوم أوشيم - المنطقة الصناعية الثانية<br>بجوار مجمع ورش الصيانة الثقيلة - "مركز الفتح لصيانة المحركات"</p>
+                </div>
+            </div>
+            <a href="https://maps.google.com/?q=Kom+Oshim+Industrial+Zone+Fayoum" target="_blank" rel="noopener" class="block text-center bg-slate-100 text-slate-800 text-xs font-bold py-2.5 rounded-xl border border-slate-300">
+                <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i> فتح الخريطة في Google Maps
+            </a>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <a id="callLink" href="#" class="bg-emerald-600 text-white p-3.5 rounded-2xl text-center shadow-sm flex flex-col items-center gap-1.5"><i class="fa-solid fa-phone text-lg"></i><span class="text-xs font-bold">اتصال هاتفي</span></a>
+            <a id="waLink" href="#" target="_blank" rel="noopener" class="bg-green-500 text-white p-3.5 rounded-2xl text-center shadow-sm flex flex-col items-center gap-1.5"><i class="fa-brands fa-whatsapp text-xl"></i><span class="text-xs font-bold">مراسلة واتساب</span></a>
+        </div>
+        <div class="bg-brand-900 text-white p-4 rounded-2xl shadow-sm space-y-3">
+            <h3 class="text-xs font-bold text-amber-400">مواعيد العمل والإمكانيات:</h3>
+            <ul class="text-xs space-y-2 text-slate-200">
+                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> العمل يومياً من 8:00 صباحاً حتى 9:00 مساءً (الجمعة عطلة).</li>
+                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> توفير أوناش سحب وخراطة وتجفيف بالمكابس الحرارية.</li>
+                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> سلك نحاس ومعزول بالورنيش الحراري بأعلى كفاءة.</li>
+            </ul>
+        </div>
+        <button id="installBtn" class="hidden w-full bg-amber-500 text-slate-900 font-bold text-xs py-3 rounded-xl"><i class="fa-solid fa-download ml-1"></i> تثبيت التطبيق على الهاتف</button>
+    </section>
+</main>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 shadow-lg safe-bottom">
+    <div class="max-w-md mx-auto sm:max-w-4xl grid grid-cols-5 text-center py-2">
+        <button data-tab="education" class="nav-btn flex flex-col items-center gap-1 py-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[10px] font-bold">التعليم</span></button>
+        <button data-tab="gallery" class="nav-btn flex flex-col items-center gap-1 py-1"><i class="fa-solid fa-images text-base"></i><span class="text-[10px] font-bold">الأعمال</span></button>
+        <button data-tab="requests" class="nav-btn flex flex-col items-center gap-1 py-1"><i class="fa-solid fa-file-pen text-base"></i><span class="text-[10px] font-bold">طلب عمل</span></button>
+        <button data-tab="account" class="nav-btn flex flex-col items-center gap-1 py-1"><i class="fa-solid fa-wallet text-base"></i><span class="text-[10px] font-bold">حسابي</span></button>
+        <button data-tab="contact" class="nav-btn flex flex-col items-center gap-1 py-1"><i class="fa-solid fa-location-dot text-base"></i><span class="text-[10px] font-bold">الموقع</span></button>
+    </div>
+</nav>
+
+<!-- نافذة الدخول -->
+<div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 relative">
+        <button id="authClose" class="absolute top-4 left-4 text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <div class="text-center">
+            <h3 id="authTitle" class="text-base font-bold text-slate-900">تسجيل الدخول</h3>
+            <p class="text-xs text-slate-500">برقم الهاتف وكلمة المرور</p>
+        </div>
+        <form id="authForm" class="space-y-3">
+            <input type="text" id="authName" placeholder="الاسم / اسم الشركة" class="hidden w-full text-xs p-3 rounded-xl border border-slate-300">
+            <input type="tel" id="authPhone" required placeholder="رقم الهاتف 010XXXXXXXX" class="w-full text-xs p-3 rounded-xl border border-slate-300">
+            <input type="password" id="authPassword" required minlength="6" placeholder="كلمة المرور (6 أحرف على الأقل)" class="w-full text-xs p-3 rounded-xl border border-slate-300">
+            <button type="submit" id="authSubmitBtn" class="w-full bg-brand-600 text-white font-bold text-xs py-3 rounded-xl">تسجيل الدخول</button>
+        </form>
+        <div class="text-center border-t border-slate-100 pt-3">
+            <button id="toggleAuthBtn" class="text-xs text-brand-600 font-bold">ليس لديك حساب؟ إنشاء حساب جديد</button>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة رفع صورة (للمدير) -->
+<div id="uploadModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 relative">
+        <button id="uploadClose" class="absolute top-4 left-4 text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <h3 class="text-base font-bold text-slate-900 text-center">إضافة صورة عمل جديد</h3>
+        <form id="uploadForm" class="space-y-3">
+            <input type="text" id="photoTitle" required placeholder="مثال: لف محرك 50 حصان مضخة مياه" class="w-full text-xs p-3 rounded-xl border border-slate-300">
+            <input type="file" id="photoFile" accept="image/*" required class="w-full text-xs p-2 rounded-xl border border-slate-300">
+            <textarea id="photoDesc" rows="2" placeholder="وصف الصيانة..." class="w-full text-xs p-3 rounded-xl border border-slate-300"></textarea>
+            <button type="submit" id="uploadSubmit" class="w-full bg-brand-600 text-white font-bold text-xs py-3 rounded-xl">نشر الصورة في المعرض</button>
+        </form>
+    </div>
+</div>
+
+<div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl z-[60] hidden items-center gap-2">
+    <i class="fa-solid fa-circle-info text-amber-400"></i><span id="toastMsg"></span>
+</div>
+
+<script type="module" src="app.js"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+</script>
+</body>
+</html>
