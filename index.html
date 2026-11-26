@@ -101,6 +101,17 @@
             <h3 class="text-xs font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-list-check text-brand-600"></i> تفاصيل وبيانات المحرك المختارة</h3>
             <div id="diagramDescription" class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100"></div>
         </div>
+
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3 pt-2">
+            <div>
+                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-graduation-cap text-brand-600"></i> أعمال تعليمية وشروحات</h2>
+                <p class="text-xs text-slate-500">دروس وتجارب عملية من الورشة</p>
+            </div>
+            <button id="lessonBtn" class="hidden bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-2 rounded-xl font-bold items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-plus"></i> إضافة درس
+            </button>
+        </div>
+        <div id="lessonsList" class="space-y-3"></div>
     </section>
 
     <!-- الأعمال -->
@@ -282,6 +293,23 @@
         <div class="text-center border-t border-slate-100 pt-3">
             <button id="toggleAuthBtn" class="text-xs text-brand-600 font-bold">ليس لديك حساب؟ إنشاء حساب جديد</button>
         </div>
+    </div>
+</div>
+
+<!-- نافذة إضافة درس (للمدير) -->
+<div id="lessonModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 relative max-h-[90vh] overflow-y-auto">
+        <button id="lessonClose" class="absolute top-4 left-4 text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <h3 class="text-base font-bold text-slate-900 text-center">إضافة درس تعليمي</h3>
+        <form id="lessonForm" class="space-y-3">
+            <input type="text" id="lessonTitle" required placeholder="عنوان الدرس: مثال: طريقة لف محرك 3 فاز" class="w-full text-xs p-3 rounded-xl border border-slate-300">
+            <textarea id="lessonDesc" rows="6" required placeholder="اكتب الشرح والخطوات (كل سطر خطوة)..." class="w-full text-xs p-3 rounded-xl border border-slate-300"></textarea>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">صورة توضيحية (اختياري)</label>
+                <input type="file" id="lessonFile" accept="image/*" class="w-full text-xs p-2 rounded-xl border border-slate-300">
+            </div>
+            <button type="submit" id="lessonSubmit" class="w-full bg-brand-600 text-white font-bold text-xs py-3 rounded-xl">نشر الدرس</button>
+        </form>
     </div>
 </div>
 

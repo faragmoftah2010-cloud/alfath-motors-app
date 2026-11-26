@@ -5,7 +5,7 @@ import {
   signInWithEmailAndPassword, signOut, updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc,
+  getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, where, limit, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -226,6 +226,8 @@ if (configured) {
       $("userStatusText").textContent = "تسجيل الدخول";
     }
     if (isAdmin) show($("uploadBtn"), "inline-flex"); else hide($("uploadBtn"), "inline-flex");
+    if (isAdmin) show($("lessonBtn"), "inline-flex"); else hide($("lessonBtn"), "inline-flex");
+    renderLessons();
     renderAccountShell();
     renderRequests([]);
   });
@@ -330,6 +332,71 @@ $("uploadForm").addEventListener("submit", async (e) => {
   } finally {
     btn.disabled = false;
   }
+});
+
+/* ---------- الأعمال التعليمية ---------- */
+let lastLessons = [];
+
+function renderLessons() {
+  const box = $("lessonsList");
+  if (!lastLessons.length) {
+    box.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">لا توجد دروس منشورة بعد.</p>';
+    return;
+  }
+  box.innerHTML = lastLessons.map((l) => `
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      ${l.img ? `<img src="${esc(l.img)}" alt="${esc(l.title)}" class="w-full max-h-64 object-cover">` : ""}
+      <div class="p-4 space-y-2">
+        <div class="flex items-start justify-between gap-2">
+          <h4 class="font-bold text-sm text-slate-900">${esc(l.title)}</h4>
+          ${isAdmin ? `<button data-del-lesson="${esc(l.id)}" class="text-red-500 text-xs" aria-label="حذف"><i class="fa-solid fa-trash"></i></button>` : ""}
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed" style="white-space:pre-line">${esc(l.desc)}</p>
+        <span class="inline-block text-[9px] text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-semibold">بواسطة: ${esc(l.author)}</span>
+      </div>
+    </div>`).join("");
+}
+
+if (configured) {
+  onSnapshot(query(collection(db, "lessons"), orderBy("createdAt", "desc"), limit(50)), (snap) => {
+    lastLessons = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderLessons();
+  }, () => {});
+}
+
+$("lessonBtn").addEventListener("click", () => show($("lessonModal")));
+$("lessonClose").addEventListener("click", () => hide($("lessonModal")));
+
+$("lessonForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("lessonSubmit");
+  btn.disabled = true;
+  try {
+    const file = $("lessonFile").files[0];
+    const img = file ? await compressImage(file, 900, 0.7) : "";
+    await addDoc(collection(db, "lessons"), {
+      title: $("lessonTitle").value.trim(),
+      desc: $("lessonDesc").value.trim(),
+      img,
+      author: user.displayName || "المركز",
+      createdAt: serverTimestamp(),
+    });
+    $("lessonForm").reset();
+    hide($("lessonModal"));
+    toast("تم نشر الدرس");
+  } catch {
+    toast("تعذر نشر الدرس");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("lessonsList").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-del-lesson]");
+  if (!b || !isAdmin) return;
+  if (!confirm("حذف هذا الدرس؟")) return;
+  try { await deleteDoc(doc(db, "lessons", b.dataset.delLesson)); toast("تم حذف الدرس"); }
+  catch { toast("تعذر حذف الدرس"); }
 });
 
 /* ---------- طلبات العمل ---------- */
